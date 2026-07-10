@@ -1,9 +1,11 @@
 services:
   - type: web
     name: memorypy-backend
-    env: docker
+    env: python
     plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn server:app --host 0.0.0.0 --port $PORT"
     healthCheckPath: /
     envVars:
-      - key: PORT
-        value: "8000"
+      - key: PYTHON_VERSION
+        value: 3.10.13
