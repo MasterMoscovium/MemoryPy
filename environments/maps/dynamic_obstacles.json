@@ -1,0 +1,61 @@
+{
+    "name": "dynamic_obstacles",
+    "description": "30x30m environment where obstacles move/appear/disappear over time. Tests adaptive decay advantage.",
+    "width_m": 30.0,
+    "height_m": 30.0,
+    "resolution": 0.1,
+    "walls": [
+        {"type": "rect", "x": 0.0, "y": 0.0, "w": 30.0, "h": 0.2},
+        {"type": "rect", "x": 0.0, "y": 29.8, "w": 30.0, "h": 0.2},
+        {"type": "rect", "x": 0.0, "y": 0.0, "w": 0.2, "h": 30.0},
+        {"type": "rect", "x": 29.8, "y": 0.0, "w": 0.2, "h": 30.0},
+
+        {"type": "rect", "x": 15.0, "y": 0.2, "w": 0.2, "h": 10.0, "_comment": "Partial divider"},
+        {"type": "rect", "x": 0.2, "y": 15.0, "w": 12.0, "h": 0.2, "_comment": "Horizontal wall with gap"}
+    ],
+    "obstacles": [
+        {"type": "rect", "x": 5.0, "y": 5.0, "w": 2.0, "h": 2.0, "_comment": "Static box"},
+        {"type": "rect", "x": 22.0, "y": 22.0, "w": 1.5, "h": 1.5, "_comment": "Static box"},
+        {"type": "circle", "cx": 10.0, "cy": 10.0, "r": 1.0, "_comment": "Static pillar"},
+        {"type": "circle", "cx": 25.0, "cy": 8.0, "r": 0.8, "_comment": "Static pillar"}
+    ],
+    "dynamic_events": [
+        {
+            "timestep": 300,
+            "action": "add",
+            "obstacle": {"type": "rect", "x": 12.0, "y": 20.0, "w": 3.0, "h": 1.0},
+            "description": "New furniture placed at t=300"
+        },
+        {
+            "timestep": 600,
+            "action": "add",
+            "obstacle": {"type": "rect", "x": 18.0, "y": 5.0, "w": 2.0, "h": 2.0},
+            "description": "Box appears at t=600"
+        },
+        {
+            "timestep": 600,
+            "action": "remove",
+            "obstacle_index": 0,
+            "description": "Original box at (5,5) removed at t=600"
+        },
+        {
+            "timestep": 1000,
+            "action": "add",
+            "obstacle": {"type": "circle", "cx": 8.0, "cy": 25.0, "r": 1.5},
+            "description": "Large obstacle appears at t=1000"
+        },
+        {
+            "timestep": 1000,
+            "action": "remove",
+            "obstacle_index": 1,
+            "description": "Box at (22,22) removed at t=1000"
+        },
+        {
+            "timestep": 1500,
+            "action": "add",
+            "obstacle": {"type": "rect", "x": 20.0, "y": 15.0, "w": 4.0, "h": 0.3},
+            "description": "Barrier wall appears at t=1500"
+        }
+    ],
+    "robot_start": {"x": 15.0, "y": 15.0, "theta": 0.0}
+}

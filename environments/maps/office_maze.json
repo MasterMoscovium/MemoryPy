@@ -1,0 +1,36 @@
+{
+    "name": "office_maze",
+    "description": "40x30m multi-room office layout with corridors. Tests loop closure and occlusion handling.",
+    "width_m": 40.0,
+    "height_m": 30.0,
+    "resolution": 0.1,
+    "walls": [
+        {"type": "rect", "x": 0.0, "y": 0.0, "w": 40.0, "h": 0.2},
+        {"type": "rect", "x": 0.0, "y": 29.8, "w": 40.0, "h": 0.2},
+        {"type": "rect", "x": 0.0, "y": 0.0, "w": 0.2, "h": 30.0},
+        {"type": "rect", "x": 39.8, "y": 0.0, "w": 0.2, "h": 30.0},
+
+        {"type": "rect", "x": 10.0, "y": 0.2, "w": 0.2, "h": 12.0, "_comment": "Room A left wall"},
+        {"type": "rect", "x": 10.0, "y": 15.0, "w": 0.2, "h": 14.8, "_comment": "Room A left wall (upper, with door gap)"},
+        {"type": "rect", "x": 20.0, "y": 0.2, "w": 0.2, "h": 8.0, "_comment": "Room B left wall"},
+        {"type": "rect", "x": 20.0, "y": 11.0, "w": 0.2, "h": 18.8, "_comment": "Room B left wall (upper)"},
+        {"type": "rect", "x": 30.0, "y": 0.2, "w": 0.2, "h": 18.0, "_comment": "Room C left wall"},
+        {"type": "rect", "x": 30.0, "y": 21.0, "w": 0.2, "h": 8.8, "_comment": "Room C left wall (upper)"},
+
+        {"type": "rect", "x": 0.2, "y": 15.0, "w": 9.8, "h": 0.2, "_comment": "Horizontal corridor wall"},
+        {"type": "rect", "x": 20.2, "y": 20.0, "w": 9.8, "h": 0.2, "_comment": "Horizontal corridor wall 2"}
+    ],
+    "obstacles": [
+        {"type": "rect", "x": 3.0, "y": 3.0, "w": 2.0, "h": 1.5, "_comment": "Desk in room A"},
+        {"type": "rect", "x": 5.0, "y": 8.0, "w": 1.5, "h": 1.5, "_comment": "Cabinet in room A"},
+        {"type": "rect", "x": 13.0, "y": 5.0, "w": 2.5, "h": 1.0, "_comment": "Table in room B"},
+        {"type": "rect", "x": 15.0, "y": 22.0, "w": 1.0, "h": 2.0, "_comment": "Shelf"},
+        {"type": "rect", "x": 24.0, "y": 3.0, "w": 1.5, "h": 1.5, "_comment": "Desk in room C"},
+        {"type": "rect", "x": 33.0, "y": 10.0, "w": 2.0, "h": 1.0, "_comment": "Counter in room D"},
+        {"type": "rect", "x": 35.0, "y": 25.0, "w": 1.5, "h": 1.5, "_comment": "Chair in room D"},
+        {"type": "circle", "cx": 25.0, "cy": 15.0, "r": 1.0, "_comment": "Pillar"},
+        {"type": "circle", "cx": 7.0, "cy": 22.0, "r": 0.7, "_comment": "Plant"}
+    ],
+    "dynamic_events": [],
+    "robot_start": {"x": 5.0, "y": 7.0, "theta": 0.0}
+}

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MemoryPy — Memory-Decay SLAM | Team Cerebro</title>
+    <meta name="description" content="Interactive demonstration of biologically-inspired memory decay in autonomous robot navigation using SLAM">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- ── Intro Overlay ── -->
+<div id="intro-overlay">
+    <div class="intro-content">
+        <div class="intro-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round">
+                <circle cx="12" cy="12" r="8"/>
+                <polyline points="12 8 12 12 15 15"/>
+            </svg>
+        </div>
+        <h1 class="intro-title">MemoryPy</h1>
+        <p class="intro-subtitle">Memory-Decay Based Autonomous Robot Navigation Using SLAM<br><i>How biological forgetting makes robots smarter</i></p>
+        <button class="btn btn-primary" style="padding: 14px 32px; font-size: 1rem; margin: 0 auto;" onclick="document.getElementById('intro-overlay').classList.add('hidden')">
+            ▶ LAUNCH DEMO
+        </button>
+        <p style="margin-top: 40px; font-size: 0.75rem; color: var(--text-muted); letter-spacing: 2px;">PRESENTED BY <span style="color: var(--purple); font-weight: 700;">TEAM CEREBRO</span></p>
+    </div>
+</div>
+
+<!-- ── Particles Background ── -->
+<canvas id="particles-canvas"></canvas>
+
+<!-- ═══ MAIN APP ═══ -->
+<div class="app">
+
+    <!-- ── HEADER ── -->
+    <header class="header">
+        <div class="brand">
+            <div class="brand-logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                </svg>
+            </div>
+            <div class="brand-text">
+                <h1>MemoryPy</h1>
+                <p>Live Python Backend Simulation</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="team-badge" id="ws-status" style="border-color: var(--green);">
+                <span id="ws-status-text" style="color: var(--green);">● Online</span>
+            </div>
+            <div class="sim-clock" id="sim-clock">T = 0</div>
+        </div>
+    </header>
+
+    <!-- ── CONTENT ── -->
+    <div class="content">
+
+        <!-- ════ LEFT PANEL ════ -->
+        <div class="panel-left">
+
+            <!-- Decay Formula -->
+            <div class="card formula-card">
+                <div class="card-title">Active Decay Model</div>
+                <div class="formula" id="formula-display">R = e<sup>−λ/S · Δt</sup></div>
+                <div class="formula-desc" id="formula-desc">Visit-frequency modulated — S grows with revisits (spaced repetition)</div>
+            </div>
+
+            <!-- Controls -->
+            <div class="card">
+                <div class="card-title">Simulation Controls</div>
+                <div class="control-row">
+                    <label>Decay Model</label>
+                    <select id="sel-model" onchange="changeModel(this.value)">
+                        <option value="exponential">Exponential</option>
+                        <option value="power_law">Power-Law</option>
+                        <option value="adaptive" selected>Adaptive</option>
+                        <option value="none">No Decay</option>
+                        <option value="threshold">Threshold</option>
+                    </select>
+                </div>
+                <div class="control-row">
+                    <label>Decay Rate (λ)</label>
+                    <input type="range" id="sl-lambda" min="0" max="0.15" step="0.001" value="0.05" oninput="updateLambda(this.value)">
+                    <span class="val" id="val-lambda">0.050</span>
+                </div>
+                <div class="control-row">
+                    <label>Speed</label>
+                    <div class="speed-pills">
+                        <div class="speed-pill" onclick="setSpeed(0.5)" data-speed="0.5">0.5×</div>
+                        <div class="speed-pill active" onclick="setSpeed(1)" data-speed="1">1×</div>
+                        <div class="speed-pill" onclick="setSpeed(3)" data-speed="3">3×</div>
+                        <div class="speed-pill" onclick="setSpeed(10)" data-speed="10">10×</div>
+                    </div>
+                </div>
+                <div class="btn-row" style="margin-top: 8px;">
+                    <button class="btn btn-primary" id="btn-toggle" onclick="toggleSim()">⏸ Pause</button>
+                    <button class="btn btn-danger" onclick="clearObstacles()">🧹 Clear Obs</button>
+                </div>
+                <div class="btn-row" style="margin-top: 6px;">
+                    <button class="btn btn-purple" onclick="wipeMemory()">🧠 Wipe Memory</button>
+                    <button class="btn btn-success" onclick="toggleObstacleMode()" id="btn-obstacle">🚧 Obstacle</button>
+                </div>
+            </div>
+
+            <!-- Live Stats -->
+            <div class="card">
+                <div class="card-title">Live Telemetry</div>
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <span class="stat-val cyan" id="stat-coverage">0%</span>
+                        <span class="stat-label">Coverage</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-val green" id="stat-cells">0</span>
+                        <span class="stat-label">Active Cells</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-val purple" id="stat-decayed">0</span>
+                        <span class="stat-label">Decayed</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-val amber" id="stat-frontiers">0</span>
+                        <span class="stat-label">Frontiers</span>
+                    </div>
+                </div>
+                <div class="memory-bar"></div>
+                <div class="memory-bar-labels">
+                    <span>Forgotten</span>
+                    <span>Decaying</span>
+                    <span>Fresh</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="hypothesis">
+                    <div class="tag">System Backend</div>
+                    <p>This UI is rendering a real <strong>Particle Filter SLAM</strong> algorithm computing log-odds updates and decay live in Python.</p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ════ CENTER PANEL ════ -->
+        <div class="panel-center">
+            <div class="sim-container" id="sim-container">
+                <canvas id="simCanvas"></canvas>
+                <div class="canvas-overlay-top">
+                    <div class="overlay-badge">
+                        <div class="dot" style="background: var(--green);"></div>
+                        <span id="badge-env">OFFICE_MAZE 40×30m</span>
+                    </div>
+                    <div class="overlay-badge" style="color: var(--cyan);">
+                        <span id="badge-model">Adaptive λ=0.050</span>
+                    </div>
+                </div>
+                <div class="legend-strip">
+                    <div class="legend-item"><div class="legend-dot" style="background: #0a1225; border: 1px solid #1a2640;"></div> Unknown</div>
+                    <div class="legend-item"><div class="legend-dot" style="background: var(--cyan); box-shadow: 0 0 6px var(--cyan);"></div> Free (fresh)</div>
+                    <div class="legend-item"><div class="legend-dot" style="background: var(--purple); box-shadow: 0 0 6px var(--purple);"></div> Decayed</div>
+                    <div class="legend-item"><div class="legend-dot" style="background: var(--magenta); box-shadow: 0 0 6px var(--magenta);"></div> Occupied</div>
+                    <div class="legend-item"><div class="legend-dot" style="background: var(--green); box-shadow: 0 0 6px var(--green);"></div> Robot</div>
+                    <div class="legend-item"><div class="legend-dot" style="background: var(--amber); box-shadow: 0 0 6px var(--amber);"></div> Frontiers</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ════ RIGHT PANEL ════ -->
+        <div class="panel-right">
+
+            <!-- Coverage Graph -->
+            <div class="card">
+                <div class="card-title">Coverage Over Time</div>
+                <div class="graph-container">
+                    <canvas id="graphCoverage"></canvas>
+                </div>
+            </div>
+
+            <!-- Decay Curves Comparison -->
+            <div class="card">
+                <div class="card-title">Decay Curves Comparison</div>
+                <div class="graph-container">
+                    <canvas id="graphDecay"></canvas>
+                </div>
+                <div class="curve-legend">
+                    <div class="curve-tag"><div class="swatch" style="background: #00e5ff;"></div> Exponential</div>
+                    <div class="curve-tag"><div class="swatch" style="background: #b388ff;"></div> Power-Law</div>
+                    <div class="curve-tag"><div class="swatch" style="background: #00e676;"></div> Adaptive (5 visits)</div>
+                    <div class="curve-tag"><div class="swatch" style="background: #ffab00;"></div> Threshold</div>
+                </div>
+            </div>
+
+            <!-- Real-Time Model Comparison -->
+            <div class="card">
+                <div class="card-title">Real-Time Model Comparison</div>
+                <div class="comparison-grid">
+                    <div class="comparison-cell" id="comp-exponential">
+                        <canvas id="canv-exponential"></canvas>
+                        <div class="label" style="color:var(--cyan)">Exponential</div>
+                    </div>
+                    <div class="comparison-cell" id="comp-none">
+                        <canvas id="canv-none"></canvas>
+                        <div class="label" style="color:var(--purple)">No Decay</div>
+                    </div>
+                    <div class="comparison-cell" id="comp-adaptive">
+                        <canvas id="canv-adaptive"></canvas>
+                        <div class="label" style="color:var(--green)">Adaptive</div>
+                    </div>
+                    <div class="comparison-cell" id="comp-aggressive">
+                        <canvas id="canv-aggressive"></canvas>
+                        <div class="label" style="color:var(--amber)">Aggressive</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Memory Usage -->
+            <div class="card">
+                <div class="card-title">Memory Usage</div>
+                <div class="graph-container">
+                    <canvas id="graphMemory"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="/static/app.js"></script>
+
+</body>
+</html>
