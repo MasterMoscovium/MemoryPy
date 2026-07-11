@@ -3,22 +3,22 @@
     "description": "40x30m multi-room office layout with corridors. Tests loop closure and occlusion handling.",
     "width_m": 40.0,
     "height_m": 30.0,
-    "resolution": 0.1,
+    "resolution": 0.25,
     "walls": [
-        {"type": "rect", "x": 0.0, "y": 0.0, "w": 40.0, "h": 0.2},
-        {"type": "rect", "x": 0.0, "y": 29.8, "w": 40.0, "h": 0.2},
-        {"type": "rect", "x": 0.0, "y": 0.0, "w": 0.2, "h": 30.0},
-        {"type": "rect", "x": 39.8, "y": 0.0, "w": 0.2, "h": 30.0},
+        {"type": "rect", "x": 0.0, "y": 0.0, "w": 40.0, "h": 0.5},
+        {"type": "rect", "x": 0.0, "y": 29.5, "w": 40.0, "h": 0.5},
+        {"type": "rect", "x": 0.0, "y": 0.0, "w": 0.5, "h": 30.0},
+        {"type": "rect", "x": 39.5, "y": 0.0, "w": 0.5, "h": 30.0},
 
-        {"type": "rect", "x": 10.0, "y": 0.2, "w": 0.2, "h": 12.0, "_comment": "Room A left wall"},
-        {"type": "rect", "x": 10.0, "y": 15.0, "w": 0.2, "h": 14.8, "_comment": "Room A left wall (upper, with door gap)"},
-        {"type": "rect", "x": 20.0, "y": 0.2, "w": 0.2, "h": 8.0, "_comment": "Room B left wall"},
-        {"type": "rect", "x": 20.0, "y": 11.0, "w": 0.2, "h": 18.8, "_comment": "Room B left wall (upper)"},
-        {"type": "rect", "x": 30.0, "y": 0.2, "w": 0.2, "h": 18.0, "_comment": "Room C left wall"},
-        {"type": "rect", "x": 30.0, "y": 21.0, "w": 0.2, "h": 8.8, "_comment": "Room C left wall (upper)"},
+        {"type": "rect", "x": 10.0, "y": 0.5, "w": 0.5, "h": 12.0, "_comment": "Room A left wall"},
+        {"type": "rect", "x": 10.0, "y": 15.0, "w": 0.5, "h": 14.5, "_comment": "Room A left wall (upper, with door gap)"},
+        {"type": "rect", "x": 20.0, "y": 0.5, "w": 0.5, "h": 8.0, "_comment": "Room B left wall"},
+        {"type": "rect", "x": 20.0, "y": 11.0, "w": 0.5, "h": 18.5, "_comment": "Room B left wall (upper)"},
+        {"type": "rect", "x": 30.0, "y": 0.5, "w": 0.5, "h": 18.0, "_comment": "Room C left wall"},
+        {"type": "rect", "x": 30.0, "y": 21.0, "w": 0.5, "h": 8.5, "_comment": "Room C left wall (upper)"},
 
-        {"type": "rect", "x": 0.2, "y": 15.0, "w": 9.8, "h": 0.2, "_comment": "Horizontal corridor wall"},
-        {"type": "rect", "x": 20.2, "y": 20.0, "w": 9.8, "h": 0.2, "_comment": "Horizontal corridor wall 2"}
+        {"type": "rect", "x": 0.5, "y": 15.0, "w": 9.5, "h": 0.5, "_comment": "Horizontal corridor wall"},
+        {"type": "rect", "x": 20.5, "y": 20.0, "w": 9.5, "h": 0.5, "_comment": "Horizontal corridor wall 2"}
     ],
     "obstacles": [
         {"type": "rect", "x": 3.0, "y": 3.0, "w": 2.0, "h": 1.5, "_comment": "Desk in room A"},
