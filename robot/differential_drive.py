@@ -93,8 +93,8 @@ class DifferentialDriveRobot:
 
         # Check collision for ground-truth
         if collision_fn is not None and collision_fn(new_true_x, new_true_y, cfg.radius):
-            # Collision: don't move ground truth, but still add noise to estimate
-            pass
+            # Collision: don't move ground truth or estimate, return zero velocity
+            v_noisy, omega_noisy = 0.0, 0.0
         else:
             dist = np.sqrt((new_true_x - self.true_x)**2 +
                            (new_true_y - self.true_y)**2)
@@ -103,16 +103,16 @@ class DifferentialDriveRobot:
             self.true_y = new_true_y
             self.true_theta = normalize_angle(new_true_theta)
 
-        # --- Noisy odometry (what the robot "measures") ---
-        v_noisy, omega_noisy = self._add_motion_noise(v, omega)
+            # --- Noisy odometry (what the robot "measures") ---
+            v_noisy, omega_noisy = self._add_motion_noise(v, omega)
 
-        new_est_x, new_est_y, new_est_theta = self._apply_motion(
-            self.est_x, self.est_y, self.est_theta, v_noisy, omega_noisy, dt
-        )
+            new_est_x, new_est_y, new_est_theta = self._apply_motion(
+                self.est_x, self.est_y, self.est_theta, v_noisy, omega_noisy, dt
+            )
 
-        self.est_x = new_est_x
-        self.est_y = new_est_y
-        self.est_theta = normalize_angle(new_est_theta)
+            self.est_x = new_est_x
+            self.est_y = new_est_y
+            self.est_theta = normalize_angle(new_est_theta)
 
         # Record trajectory
         self.true_trajectory.append((self.true_x, self.true_y, self.true_theta))

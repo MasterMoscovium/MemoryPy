@@ -107,9 +107,12 @@ class AStarPlanner:
         # Add uncertainty cost
         cost_map += cfg.uncertainty_cost * uncertainty
 
-        # Heavily penalize definitely-occupied cells
+        # Heavily penalize definitely-occupied cells, and inflate them by 1 cell
+        # to prevent the robot from scraping the walls and getting physically stuck.
         occupied = prob_map > 0.7
-        cost_map[occupied] = cfg.obstacle_cost * 10
+        import scipy.ndimage
+        occupied_dilated = scipy.ndimage.binary_dilation(occupied)
+        cost_map[occupied_dilated] = cfg.obstacle_cost * 10
 
         return cost_map
 

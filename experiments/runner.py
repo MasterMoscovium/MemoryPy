@@ -228,10 +228,16 @@ class SimulationRunner:
         v, omega = self._compute_velocity(pose)
 
         # 8. Move robot
-        self.robot.move(
+        v_noisy, omega_noisy = self.robot.move(
             v, omega,
             collision_fn=self.grid_world.check_collision,
         )
+
+        # 9. Stuck detection
+        # If we commanded significant forward velocity but physically didn't move (collided)
+        if abs(v) > 0.1 and abs(v_noisy) < 0.01:
+            # Force immediate A* replan by clearing the current goal
+            self.goal_selector.current_goal = None
 
         self._last_v = v
         self._last_omega = omega
@@ -244,7 +250,7 @@ class SimulationRunner:
         Simple proportional controller: turn toward waypoint, then drive.
         """
         waypoint = self.goal_selector.get_next_waypoint(
-            (pose[0], pose[1]), lookahead=0.5
+            (pose[0], pose[1]), lookahead=0.2
         )
 
         if waypoint is None:
