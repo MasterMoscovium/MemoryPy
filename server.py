@@ -52,6 +52,7 @@ class SimState:
         cfg.experiment.max_timesteps = 9999999
         cfg.particle_filter.num_particles = 5
         cfg.lidar.num_beams = 90
+        cfg.grid.resolution = 0.25
         self.runner = SimulationRunner(cfg, seed=42)
 
         # 4 background runners for comparison mini-maps
@@ -72,6 +73,7 @@ class SimState:
             c.experiment.max_timesteps = 9999999
             c.particle_filter.num_particles = 1
             c.lidar.num_beams = 90
+            c.grid.resolution = 0.25
             self.comp_runners[name] = SimulationRunner(c, seed=42)
         self.thread = threading.Thread(target=self._sim_loop, daemon=True)
 
