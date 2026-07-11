@@ -46,8 +46,8 @@ class SimState:
 
         # Main active runner for the large map
         cfg = SimulationConfig.for_environment("office_maze")
-        cfg.lidar.max_range = 50.0
-        cfg.decay.model_type = DecayModelType.ADAPTIVE
+        cfg.lidar.max_range = 15.0
+        cfg.decay.model_type = DecayModelType.EXPONENTIAL
         cfg.decay.decay_lambda = 0.05
         cfg.experiment.max_timesteps = 9999999
         cfg.particle_filter.num_particles = 5
@@ -64,7 +64,7 @@ class SimState:
         ]
         for name, mtype in models:
             c = SimulationConfig.for_environment("office_maze")
-            c.lidar.max_range = 50.0
+            c.lidar.max_range = 15.0
             c.decay.model_type = mtype
             c.decay.decay_lambda = 0.05
             if mtype == DecayModelType.AGGRESSIVE:
@@ -100,13 +100,26 @@ class SimState:
                     for r in self.comp_runners.values():
                         r.grid_world.grid = new_gt.copy()
 
+                    # Update Main Runner
                     self.runner._timestep = self.t
                     self.runner._step(self.t)
                     
-                    # Step comparison models
+                    # Massively Optimized Comparison Runners Update
+                    # They don't need to run A* path planning or raycasting!
+                    # We just copy the main robot's pose and scan and apply memory decay.
+                    main_pose = self.runner.particle_filter.get_best_pose()
+                    main_scan = self.runner.lidar.scan(self.runner.robot.true_pose, self.runner.grid_world)
+                    
                     for r in self.comp_runners.values():
+                        # Update their local ground truth so obstacle bounds match
+                        r.grid_world.grid = new_gt.copy()
+                        r_grid = r.particle_filter.get_occupancy_grid()
+                        # Apply identical sensor reading
+                        r_grid.update(main_pose, main_scan, self.t)
+                        # Apply custom decay
+                        if r.memory_manager.should_apply_decay(self.t):
+                            r.memory_manager.apply_decay(r_grid, float(self.t))
                         r._timestep = self.t
-                        r._step(self.t)
                         
                     self.t += 1
             # Adjust sleep time based on simulation speed (default 20 steps/sec)
