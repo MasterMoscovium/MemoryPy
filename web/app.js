@@ -267,16 +267,16 @@ function renderGrid(data) {
         const ry = (H - 1 - est[1] / res + 0.5) * cellH;
         const rr = Math.max(5, cellW * 2.5);
 
-        simCtx.shadowColor = '#00e676';
+        simCtx.shadowColor = '#ffffff';
         simCtx.shadowBlur = 20;
-        simCtx.fillStyle = '#00e676';
+        simCtx.fillStyle = '#ffffff';
         simCtx.beginPath(); simCtx.arc(rx, ry, rr, 0, Math.PI * 2); simCtx.fill();
         
         simCtx.shadowBlur = 0;
-        simCtx.fillStyle = '#b9f6ca';
+        simCtx.fillStyle = '#ffff00';
         simCtx.beginPath(); simCtx.arc(rx, ry, rr * 0.5, 0, Math.PI * 2); simCtx.fill();
 
-        simCtx.strokeStyle = '#00e676';
+        simCtx.strokeStyle = '#ffffff';
         simCtx.lineWidth = 2;
         simCtx.beginPath();
         simCtx.moveTo(rx, ry);

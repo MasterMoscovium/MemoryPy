@@ -46,12 +46,13 @@ class SimState:
 
         # Main active runner for the large map
         cfg = SimulationConfig.for_environment("office_maze")
-        cfg.lidar.max_range = 15.0
+        cfg.lidar.max_range = 8.0
         cfg.decay.model_type = DecayModelType.EXPONENTIAL
         cfg.decay.decay_lambda = 0.05
         cfg.experiment.max_timesteps = 9999999
-        cfg.particle_filter.num_particles = 5
-        cfg.lidar.num_beams = 90
+        cfg.particle_filter.num_particles = 1
+        cfg.lidar.num_beams = 45
+        cfg.lidar.wall_thickness = 1
         cfg.grid.resolution = 0.25
         self.runner = SimulationRunner(cfg, seed=42)
 
@@ -65,14 +66,15 @@ class SimState:
         ]
         for name, mtype in models:
             c = SimulationConfig.for_environment("office_maze")
-            c.lidar.max_range = 15.0
+            c.lidar.max_range = 8.0
             c.decay.model_type = mtype
             c.decay.decay_lambda = 0.05
             if mtype == DecayModelType.AGGRESSIVE:
                 c.decay.aggressive_lambda = 0.2
             c.experiment.max_timesteps = 9999999
             c.particle_filter.num_particles = 1
-            c.lidar.num_beams = 90
+            c.lidar.num_beams = 45
+            c.lidar.wall_thickness = 1
             c.grid.resolution = 0.25
             self.comp_runners[name] = SimulationRunner(c, seed=42)
         self.thread = threading.Thread(target=self._sim_loop, daemon=True)
