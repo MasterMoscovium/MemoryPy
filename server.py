@@ -88,47 +88,42 @@ class SimState:
             t0 = time.time()
             if self.is_running:
                 with self.lock:
-                    # Update dynamic moving obstacles
-                    gw = self.runner.grid_world
-                    for b in self.bouncers:
-                        gw._erase_shape(gw.grid, {"type": "rect", "x": b.x, "y": b.y, "w": b.w, "h": b.h})
-                    
-                    for b in self.bouncers:
-                        b.x += b.vx
-                        b.y += b.vy
-                        if b.x <= 0 or b.x + b.w >= gw.width_m: b.vx *= -1
-                        if b.y <= 0 or b.y + b.h >= gw.height_m: b.vy *= -1
-                        gw._draw_shape(gw.grid, {"type": "rect", "x": b.x, "y": b.y, "w": b.w, "h": b.h})
-                        
-                    # Sync ground truth across runners
-                    new_gt = gw.grid.copy()
-                    for name, r in self.comp_runners.items():
-                        r.grid_world.grid = new_gt.copy()
+                    # Run 3 sim steps per loop for higher throughput
+                    for _batch in range(3):
+                        # Update dynamic obstacles every 3rd step only
+                        if self.t % 3 == 0:
+                            gw = self.runner.grid_world
+                            for b in self.bouncers:
+                                gw._erase_shape(gw.grid, {"type": "rect", "x": b.x, "y": b.y, "w": b.w, "h": b.h})
+                            for b in self.bouncers:
+                                b.x += b.vx
+                                b.y += b.vy
+                                if b.x <= 0 or b.x + b.w >= gw.width_m: b.vx *= -1
+                                if b.y <= 0 or b.y + b.h >= gw.height_m: b.vy *= -1
+                                gw._draw_shape(gw.grid, {"type": "rect", "x": b.x, "y": b.y, "w": b.w, "h": b.h})
 
-                    # Update Main Runner
-                    self.runner._timestep = self.t
-                    self.runner._step(self.t)
-                    
-                    # Massively Optimized Comparison Runners Update
-                    # They don't need to run A* path planning or raycasting!
-                    # We just copy the main robot's pose and scan and apply memory decay.
-                    main_pose = self.runner.particle_filter.get_best_pose()
-                    main_scan = self.runner.lidar.scan(self.runner.robot.true_pose, self.runner.grid_world)
-                    
-                    for name, r in self.comp_runners.items():
-                        r_grid = r.particle_filter.get_occupancy_grid()
-                        # Apply identical sensor reading
-                        r_grid.update(main_pose, main_scan, self.t)
-                        # Apply custom decay
-                        if r.memory_manager.should_apply_decay(self.t):
-                            r.memory_manager.apply_decay(r_grid, float(self.t))
-                        r._timestep = self.t
-                        
-                    self.t += 1
-            # Adjust sleep time based on simulation speed (aim for 30 steps/sec)
-            target_dt = 0.033 / getattr(self, 'sim_speed', 1.0)
+                        # Main runner step
+                        self.runner._timestep = self.t
+                        self.runner._step(self.t)
+
+                        # Comparison runners: only update every 3rd step
+                        if self.t % 3 == 0:
+                            gw = self.runner.grid_world
+                            new_gt = gw.grid.copy()
+                            main_pose = self.runner.particle_filter.get_best_pose()
+                            main_scan = self.runner.lidar.scan(self.runner.robot.true_pose, gw)
+                            for name, r in self.comp_runners.items():
+                                r.grid_world.grid = new_gt.copy()
+                                r_grid = r.particle_filter.get_occupancy_grid()
+                                r_grid.update(main_pose, main_scan, self.t)
+                                if r.memory_manager.should_apply_decay(self.t):
+                                    r.memory_manager.apply_decay(r_grid, float(self.t))
+                                r._timestep = self.t
+
+                        self.t += 1
+            # Target ~10 loop iterations/sec = 30 sim steps/sec
             elapsed = time.time() - t0
-            sleep_time = max(0, target_dt - elapsed)
+            sleep_time = max(0, 0.1 - elapsed)
             time.sleep(sleep_time)
 
 
@@ -265,9 +260,9 @@ async def websocket_endpoint(websocket: WebSocket):
                 combined = np.where(last_obs >= 0, prob_map, -1.0)
                 flat = combined.ravel().round(2).tolist()
 
-                # Ground truth for overlay (send every 10 frames to save bandwidth)
+                # Ground truth for overlay (always send first few frames, then every 30)
                 gt_flat = None
-                if sim_state.t % 10 == 0:
+                if sim_state.t < 15 or sim_state.t % 30 == 0:
                     gt = sim_state.runner.grid_world.grid
                     gt_flat = gt.ravel().astype(int).tolist()
 

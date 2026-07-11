@@ -254,12 +254,12 @@ class SimulationRunner:
         )
 
         if waypoint is None:
-            # No goal — wander with more purpose
+            # No goal — drive forward aggressively with alternating sweeps
             self._wander_timer = getattr(self, '_wander_timer', 0) + 1
-            if self._wander_timer % 30 < 15:
-                return 0.3, 0.4  # Arc right
+            if self._wander_timer % 40 < 20:
+                return 1.2, 0.8   # Fast arc right
             else:
-                return 0.3, -0.4  # Arc left
+                return 1.2, -0.8  # Fast arc left
 
         # Angle to waypoint
         dx = waypoint[0] - pose[0]

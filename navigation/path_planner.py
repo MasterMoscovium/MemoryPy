@@ -35,7 +35,7 @@ class AStarPlanner:
     def plan(self, grid: DecayingOccupancyGrid,
              start_world: Tuple[float, float],
              goal_world: Tuple[float, float],
-             max_iterations: int = 50000
+             max_iterations: int = 5000
              ) -> Optional[List[Tuple[float, float]]]:
         """
         Plan a path from start to goal in world coordinates.

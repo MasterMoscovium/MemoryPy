@@ -72,7 +72,7 @@ class RobotConfig:
     """Differential-drive robot parameters."""
     max_linear_velocity: float = 1.5       # m/s
     max_angular_velocity: float = 2.5      # rad/s
-    dt: float = 0.1                         # Simulation timestep (seconds)
+    dt: float = 0.2                         # Simulation timestep (seconds)
 
     # Odometry noise (standard deviations)
     alpha1: float = 0.05    # Rotation noise from rotation
@@ -172,7 +172,7 @@ class NavigationConfig:
     obstacle_cost: float = 100.0     # Cost multiplier for occupied cells
     uncertainty_cost: float = 5.0    # Cost multiplier for uncertain cells
     base_cost: float = 1.0           # Base traversal cost per cell
-    replan_interval: int = 20        # Replan path every N steps
+    replan_interval: int = 50        # Replan path every N steps
 
     # Frontier detection
     min_frontier_size: int = 3       # Minimum cells for a valid frontier
