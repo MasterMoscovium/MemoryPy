@@ -200,8 +200,8 @@ function renderGrid(data) {
             const gt = cachedGT ? cachedGT[i] : 0;
             const lastObs = data.last_obs[i];
 
-            // ImageData is top-left origin, our grid row 0 is bottom
-            const drawRow = H - 1 - r;
+            // ImageData is top-left origin, and our backend sets row 0 = top of world
+            const drawRow = r;
             const pi = (drawRow * W + c) * 4;
 
             if (gt === 0) total++;
@@ -332,7 +332,7 @@ function renderComparisons(comps, t) {
                 const i = r * W + c;
                 const v = compData.grid[i];
                 const lastObs = compData.last_obs[i];
-                const drawRow = H - 1 - r;
+                const drawRow = r;
                 const pi = (drawRow * W + c) * 4;
 
                 let red, green, blue;

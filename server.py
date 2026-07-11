@@ -92,8 +92,8 @@ class SimState:
                         # Update dynamic obstacles every 3rd step only
                         if self.t % 3 == 0:
                             gw = self.runner.grid_world
-                            for b in self.bouncers:
-                                gw._erase_shape(gw.grid, {"type": "rect", "x": b.x, "y": b.y, "w": b.w, "h": b.h})
+                            # Rebuild the static grid to ensure walls are intact
+                            gw.grid = gw._build_grid()
                             for b in self.bouncers:
                                 b.x += b.vx
                                 b.y += b.vy

@@ -281,6 +281,7 @@ class GridWorld:
             List of descriptions of events applied.
         """
         applied = []
+        events_applied = False
         for i, event in enumerate(self._dynamic_events):
             if i in self._applied_events:
                 continue
@@ -288,21 +289,22 @@ class GridWorld:
                 self._apply_event(event)
                 self._applied_events.add(i)
                 applied.append(event.description)
+                events_applied = True
+        
+        if events_applied:
+            self.grid = self._build_grid()
+            
         return applied
 
     def _apply_event(self, event: DynamicEvent):
-        """Apply a single dynamic event to the grid."""
+        """Apply a single dynamic event to the grid's internal lists."""
         if event.action == "add" and event.obstacle is not None:
             self._obstacles.append(event.obstacle)
-            self._draw_shape(self.grid, event.obstacle)
 
         elif event.action == "remove" and event.obstacle_index is not None:
             idx = event.obstacle_index
             if 0 <= idx < len(self._obstacles):
-                removed = self._obstacles[idx]
-                self._erase_shape(self.grid, removed)
-                # Rebuild to ensure walls aren't erased
-                self._rebuild_grid_safe()
+                self._obstacles.pop(idx)
 
     def spawn_obstacle(self, x: float, y: float, w: float, h: float):
         """API-driven dynamic obstacle spawning."""
