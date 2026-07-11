@@ -102,7 +102,7 @@ class SimState:
                         
                     # Sync ground truth across runners
                     new_gt = gw.grid.copy()
-                    for r in self.comp_runners.values():
+                    for name, r in self.comp_runners.items():
                         r.grid_world.grid = new_gt.copy()
 
                     # Update Main Runner
@@ -115,9 +115,7 @@ class SimState:
                     main_pose = self.runner.particle_filter.get_best_pose()
                     main_scan = self.runner.lidar.scan(self.runner.robot.true_pose, self.runner.grid_world)
                     
-                    for r in self.comp_runners.values():
-                        # Update their local ground truth so obstacle bounds match
-                        r.grid_world.grid = new_gt.copy()
+                    for name, r in self.comp_runners.items():
                         r_grid = r.particle_filter.get_occupancy_grid()
                         # Apply identical sensor reading
                         r_grid.update(main_pose, main_scan, self.t)
@@ -265,11 +263,13 @@ async def websocket_endpoint(websocket: WebSocket):
                 #   -1 = never observed (unknown)
                 #   0..1 = probability (0=free, 1=occupied)
                 combined = np.where(last_obs >= 0, prob_map, -1.0)
-                flat = [round(float(v), 2) for v in combined.flatten()]
+                flat = combined.ravel().round(2).tolist()
 
-                # Ground truth for overlay
-                gt = sim_state.runner.grid_world.grid
-                gt_flat = [int(v) for v in gt.flatten()]
+                # Ground truth for overlay (send every 10 frames to save bandwidth)
+                gt_flat = None
+                if sim_state.t % 10 == 0:
+                    gt = sim_state.runner.grid_world.grid
+                    gt_flat = gt.ravel().astype(int).tolist()
 
                 # Frontiers
                 try:
@@ -286,12 +286,11 @@ async def websocket_endpoint(websocket: WebSocket):
                     path = []
 
                 # We also want to send the last_observed timestamps to render fading colors
-                last_obs_list = [int(v) for v in last_obs.flatten()]
+                last_obs_list = last_obs.ravel().astype(int).tolist()
 
                 data = {
                     "t": sim_state.t,
                     "grid": flat,
-                    "gt": gt_flat,
                     "last_obs": last_obs_list,
                     "w": int(prob_map.shape[1]),
                     "h": int(prob_map.shape[0]),
@@ -302,6 +301,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     "frontiers": frontier_pts,
                     "comps": {}
                 }
+                if gt_flat is not None:
+                    data["gt"] = gt_flat
                 
                 # Send comparison grids every 5 frames to save WS bandwidth
                 if sim_state.t % 5 == 0:
@@ -314,16 +315,16 @@ async def websocket_endpoint(websocket: WebSocket):
                         # Downsample (stride of 2) to further save bandwidth for the small minimaps
                         c_down = c_combined[::2, ::2]
                         c_last_down = c_last[::2, ::2]
-                        
+
                         data["comps"][name] = {
-                            "grid": [round(float(v), 2) for v in c_down.flatten()],
-                            "last_obs": [int(v) for v in c_last_down.flatten()],
+                            "grid": c_down.ravel().round(2).tolist(),
+                            "last_obs": c_last_down.ravel().astype(int).tolist(),
                             "w": int(c_down.shape[1]),
                             "h": int(c_down.shape[0])
                         }
 
             await websocket.send_json(data)
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.033)
     except WebSocketDisconnect:
         pass
     except Exception as e:

@@ -160,6 +160,9 @@ simCanvas.addEventListener('click', (e) => {
 });
 
 // ── WebSocket Rendering ──
+let cachedGT = null;   // Cache ground truth (only sent every 10 frames)
+let fpsFrames = 0, fpsLast = performance.now(), fpsDisplay = 0;
+
 function renderGrid(data) {
     const W = data.w;
     const H = data.h;
@@ -168,27 +171,38 @@ function renderGrid(data) {
     if (W !== gridW || H !== gridH) {
         gridW = W;
         gridH = H;
-        // Keep canvas pixel size independent of grid, we'll scale drawing
     }
 
-    const cellW = simCanvas.width / W;
-    const cellH = simCanvas.height / H;
-    
-    simCtx.fillStyle = '#050810';
-    simCtx.fillRect(0, 0, simCanvas.width, simCanvas.height);
-    
+    // Cache gt when sent
+    if (data.gt) cachedGT = data.gt;
+
+    // FPS counter
+    fpsFrames++;
+    const now = performance.now();
+    if (now - fpsLast >= 1000) {
+        fpsDisplay = fpsFrames;
+        fpsFrames = 0;
+        fpsLast = now;
+    }
+    const fpsEl = document.getElementById('fps-counter');
+    if (fpsEl) fpsEl.textContent = `${fpsDisplay} FPS`;
+
+    // Use ImageData for blazing fast pixel rendering
+    const imgData = simCtx.createImageData(W, H);
+    const pixels = imgData.data;
+
     let known = 0, total = 0, decayed = 0;
 
     for (let r = 0; r < H; r++) {
         for (let c = 0; c < W; c++) {
             const i = r * W + c;
-            const v = data.grid[i];       // -1=unknown, 0..1=probability
-            const gt = data.gt[i];        // 0=free, 1=wall
+            const v = data.grid[i];
+            const gt = cachedGT ? cachedGT[i] : 0;
             const lastObs = data.last_obs[i];
-            
-            // Flip row for drawing because canvas is 0,0 top-left but map is bottom-left
-            const drawY = (H - 1 - r) * cellH;
-            const drawX = c * cellW;
+
+            // ImageData is top-left origin, our grid row 0 is bottom
+            const drawRow = H - 1 - r;
+            const pi = (drawRow * W + c) * 4;
 
             if (gt === 0) total++;
             if (v !== -1 && gt === 0) known++;
@@ -196,43 +210,51 @@ function renderGrid(data) {
             let red, green, blue;
 
             if (gt === 1) {
-                // Ground truth wall → dim purple
                 red = 50; green = 10; blue = 70;
             } else if (v === -1) {
-                continue; // background color handles this
+                red = 5; green = 8; blue = 16;
             } else if (v < 0.35) {
-                // Free → cyan to purple gradient based on freshness
                 const dt = (lastObs >= 0) ? (data.t - lastObs) : 999;
                 if (dt > 30) decayed++;
-                
-                // Color interpolation: fresh (cyan) -> old (purple)
                 const freshness = Math.max(0, 1 - dt / 150);
-                red = Math.round(5 + 15 * (1 - freshness) + 120 * (1-freshness)); 
+                red = Math.round(5 + 15 * (1 - freshness) + 120 * (1 - freshness));
                 green = Math.round(60 + 170 * freshness);
                 blue = Math.round(80 + 175 * freshness);
             } else if (v > 0.6) {
-                // Occupied → bright magenta
                 const intensity = Math.min((v - 0.6) / 0.4, 1);
                 red = Math.round(100 + 155 * intensity);
                 green = 10;
                 blue = Math.round(100 + 129 * intensity);
             } else {
-                // Uncertain / decayed transition
                 red = 40; green = 25; blue = 65;
             }
 
-            simCtx.fillStyle = `rgb(${red},${green},${blue})`;
-            simCtx.fillRect(drawX, drawY, cellW + 0.5, cellH + 0.5);
+            pixels[pi]     = red;
+            pixels[pi + 1] = green;
+            pixels[pi + 2] = blue;
+            pixels[pi + 3] = 255;
         }
     }
-    
+
+    // Draw the pixel grid scaled up to the canvas
+    const offscreen = new OffscreenCanvas(W, H);
+    const offCtx = offscreen.getContext('2d');
+    offCtx.putImageData(imgData, 0, 0);
+
+    simCtx.imageSmoothingEnabled = false;
+    simCtx.clearRect(0, 0, simCanvas.width, simCanvas.height);
+    simCtx.drawImage(offscreen, 0, 0, simCanvas.width, simCanvas.height);
+
+    const cellW = simCanvas.width / W;
+    const cellH = simCanvas.height / H;
+
     // Update Stats
     const coverage = total > 0 ? known / total : 0;
     document.getElementById('stat-coverage').textContent = (coverage * 100).toFixed(1) + '%';
     document.getElementById('stat-cells').textContent = known;
     document.getElementById('stat-decayed').textContent = decayed;
     document.getElementById('stat-frontiers').textContent = data.frontiers ? data.frontiers.length : 0;
-    
+
     if (data.t % 5 === 0 && data.t !== currentTimestep) {
         currentTimestep = data.t;
         coverageHistory.push(coverage);
@@ -271,7 +293,7 @@ function renderGrid(data) {
         simCtx.shadowBlur = 20;
         simCtx.fillStyle = '#ffffff';
         simCtx.beginPath(); simCtx.arc(rx, ry, rr, 0, Math.PI * 2); simCtx.fill();
-        
+
         simCtx.shadowBlur = 0;
         simCtx.fillStyle = '#ffff00';
         simCtx.beginPath(); simCtx.arc(rx, ry, rr * 0.5, 0, Math.PI * 2); simCtx.fill();
@@ -291,38 +313,35 @@ function renderComparisons(comps, t) {
     for (const [name, compData] of Object.entries(comps)) {
         const canvas = document.getElementById(`canv-${name}`);
         if (!canvas) continue;
-        
+
         const ctx = canvas.getContext('2d');
         const W = compData.w;
         const H = compData.h;
-        
+
         // Match aspect ratio
         const parent = canvas.parentElement;
         canvas.width = parent.clientWidth;
-        canvas.height = parent.clientHeight - 20; // space for label
-        
-        const cellW = canvas.width / W;
-        const cellH = canvas.height / H;
-        
-        ctx.fillStyle = '#050810';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
+        canvas.height = parent.clientHeight - 20;
+
+        // Use ImageData for fast rendering
+        const imgData = ctx.createImageData(W, H);
+        const pixels = imgData.data;
+
         for (let r = 0; r < H; r++) {
             for (let c = 0; c < W; c++) {
                 const i = r * W + c;
                 const v = compData.grid[i];
                 const lastObs = compData.last_obs[i];
-                
-                if (v === -1) continue;
-                
-                const drawY = (H - 1 - r) * cellH;
-                const drawX = c * cellW;
-                
+                const drawRow = H - 1 - r;
+                const pi = (drawRow * W + c) * 4;
+
                 let red, green, blue;
-                if (v < 0.35) {
+                if (v === -1) {
+                    red = 5; green = 8; blue = 16;
+                } else if (v < 0.35) {
                     const dt = (lastObs >= 0) ? (t - lastObs) : 999;
                     const freshness = Math.max(0, 1 - dt / 150);
-                    red = Math.round(5 + 15 * (1 - freshness) + 120 * (1-freshness)); 
+                    red = Math.round(5 + 15 * (1 - freshness) + 120 * (1 - freshness));
                     green = Math.round(60 + 170 * freshness);
                     blue = Math.round(80 + 175 * freshness);
                 } else if (v > 0.6) {
@@ -333,11 +352,20 @@ function renderComparisons(comps, t) {
                 } else {
                     red = 40; green = 25; blue = 65;
                 }
-                
-                ctx.fillStyle = `rgb(${red},${green},${blue})`;
-                ctx.fillRect(drawX, drawY, cellW + 0.5, cellH + 0.5);
+
+                pixels[pi]     = red;
+                pixels[pi + 1] = green;
+                pixels[pi + 2] = blue;
+                pixels[pi + 3] = 255;
             }
         }
+
+        const offscreen = new OffscreenCanvas(W, H);
+        const offCtx = offscreen.getContext('2d');
+        offCtx.putImageData(imgData, 0, 0);
+
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(offscreen, 0, 0, canvas.width, canvas.height);
     }
 }
 
