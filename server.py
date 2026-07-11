@@ -80,7 +80,6 @@ class SimState:
         self.thread = threading.Thread(target=self._sim_loop, daemon=True)
 
     def start(self):
-        self.is_running = True
         self.thread.start()
 
     def _sim_loop(self):
@@ -112,10 +111,17 @@ class SimState:
                             new_gt = gw.grid.copy()
                             main_pose = self.runner.particle_filter.get_best_pose()
                             main_scan = self.runner.lidar.scan(self.runner.robot.true_pose, gw)
+                            
+                            raycast_indices = None
                             for name, r in self.comp_runners.items():
                                 r.grid_world.grid = new_gt.copy()
                                 r_grid = r.particle_filter.get_occupancy_grid()
-                                r_grid.update(main_pose, main_scan, self.t)
+                                
+                                if raycast_indices is None:
+                                    raycast_indices = r_grid.update(main_pose, main_scan, self.t)
+                                else:
+                                    r_grid.update_vectorized(*raycast_indices, self.t)
+                                    
                                 if r.memory_manager.should_apply_decay(self.t):
                                     r.memory_manager.apply_decay(r_grid, float(self.t))
                                 r._timestep = self.t
@@ -247,6 +253,7 @@ def toggle_sim():
 @app.websocket("/ws/stream")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
+    frames_sent = 0
     try:
         while True:
             with sim_state.lock:
@@ -262,7 +269,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
                 # Ground truth for overlay (always send first few frames, then every 30)
                 gt_flat = None
-                if sim_state.t < 15 or sim_state.t % 30 == 0:
+                if frames_sent < 15 or frames_sent % 30 == 0:
                     gt = sim_state.runner.grid_world.grid
                     gt_flat = gt.ravel().astype(int).tolist()
 
@@ -319,6 +326,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         }
 
             await websocket.send_json(data)
+            frames_sent += 1
             await asyncio.sleep(0.033)
     except WebSocketDisconnect:
         pass

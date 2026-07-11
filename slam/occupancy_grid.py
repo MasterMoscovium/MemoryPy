@@ -78,8 +78,14 @@ class DecayingOccupancyGrid:
             pose: Robot pose (x, y, θ) in world coordinates.
             scan: Array of shape (N, 2) with [angle, distance] per beam.
             timestamp: Current simulation time (for decay tracking).
+            
+        Returns:
+            Tuple of numpy arrays: (free_r, free_c, occ_r, occ_c) for reuse.
         """
         x, y, theta = pose
+        
+        free_r_list, free_c_list = [], []
+        occ_r_list, occ_c_list = [], []
 
         for i in range(len(scan)):
             angle = scan[i, 0]
@@ -105,6 +111,8 @@ class DecayingOccupancyGrid:
 
                 if j == len(cells) - 1 and is_hit:
                     # Last cell = hit point → occupied
+                    occ_r_list.append(row)
+                    occ_c_list.append(col)
                     self.log_odds[row, col] += self._l_occ - self._l_prior
                     # Also mark neighboring cells as occupied (wall thickness)
                     wt = self.lidar_config.wall_thickness
@@ -117,6 +125,8 @@ class DecayingOccupancyGrid:
                                 )
                 else:
                     # Cells before hit → free
+                    free_r_list.append(row)
+                    free_c_list.append(col)
                     self.log_odds[row, col] += self._l_free - self._l_prior
 
                 # Update metadata
@@ -124,6 +134,48 @@ class DecayingOccupancyGrid:
                 self.visit_count[row, col] += 1
 
         # Clamp log-odds to prevent overconfidence
+        np.clip(self.log_odds,
+                self.grid_config.log_odds_min,
+                self.grid_config.log_odds_max,
+                out=self.log_odds)
+                
+        return (np.array(free_r_list, dtype=np.int32), 
+                np.array(free_c_list, dtype=np.int32), 
+                np.array(occ_r_list, dtype=np.int32), 
+                np.array(occ_c_list, dtype=np.int32))
+
+    def update_vectorized(self, free_r: np.ndarray, free_c: np.ndarray,
+                          occ_r: np.ndarray, occ_c: np.ndarray,
+                          timestamp: float):
+        """
+        Fast, vectorized update using precomputed indices.
+        Significantly faster than calling update() which loops Bresenham per beam.
+        """
+        # Apply free updates
+        if len(free_r) > 0:
+            self.log_odds[free_r, free_c] += (self._l_free - self._l_prior)
+            self.last_observed[free_r, free_c] = timestamp
+            self.visit_count[free_r, free_c] += 1
+            
+        # Apply occupied updates (with thickness)
+        if len(occ_r) > 0:
+            self.log_odds[occ_r, occ_c] += (self._l_occ - self._l_prior)
+            self.last_observed[occ_r, occ_c] = timestamp
+            self.visit_count[occ_r, occ_c] += 1
+
+            # Thickness
+            wt = self.lidar_config.wall_thickness
+            for dr in range(-wt + 1, wt):
+                for dc in range(-wt + 1, wt):
+                    if dr == 0 and dc == 0: continue
+                    nr, nc = occ_r + dr, occ_c + dc
+                    valid = (nr >= 0) & (nr < self.shape[0]) & (nc >= 0) & (nc < self.shape[1])
+                    v_nr, v_nc = nr[valid], nc[valid]
+                    if len(v_nr) > 0:
+                        self.log_odds[v_nr, v_nc] += (self._l_occ - self._l_prior) * 0.3
+                        self.last_observed[v_nr, v_nc] = timestamp
+
+        # Clamp
         np.clip(self.log_odds,
                 self.grid_config.log_odds_min,
                 self.grid_config.log_odds_max,
