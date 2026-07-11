@@ -70,8 +70,8 @@ class GridConfig:
 @dataclass
 class RobotConfig:
     """Differential-drive robot parameters."""
-    max_linear_velocity: float = 0.5       # m/s
-    max_angular_velocity: float = 1.0      # rad/s
+    max_linear_velocity: float = 1.5       # m/s
+    max_angular_velocity: float = 2.5      # rad/s
     dt: float = 0.1                         # Simulation timestep (seconds)
 
     # Odometry noise (standard deviations)

@@ -85,6 +85,7 @@ class SimState:
 
     def _sim_loop(self):
         while True:
+            t0 = time.time()
             if self.is_running:
                 with self.lock:
                     # Update dynamic moving obstacles
@@ -126,8 +127,10 @@ class SimState:
                         r._timestep = self.t
                         
                     self.t += 1
-            # Adjust sleep time based on simulation speed (default 20 steps/sec)
-            sleep_time = 0.05 / getattr(self, 'sim_speed', 1.0)
+            # Adjust sleep time based on simulation speed (aim for 30 steps/sec)
+            target_dt = 0.033 / getattr(self, 'sim_speed', 1.0)
+            elapsed = time.time() - t0
+            sleep_time = max(0, target_dt - elapsed)
             time.sleep(sleep_time)
 
 
