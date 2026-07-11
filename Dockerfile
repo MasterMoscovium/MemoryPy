@@ -21,5 +21,5 @@ COPY . .
 # Expose port
 EXPOSE 8000
 
-# Run the Uvicorn server on host 0.0.0.0 and port $PORT
-CMD uvicorn server:app --host 0.0.0.0 --port ${PORT:-8000}
+# Run the Uvicorn server on host 0.0.0.0 and port 8000 explicitly
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
